@@ -103,4 +103,5 @@ This project is for educational purposes.
 
 ## 👨‍💻 Author
 
-Developed by **Ahmed** and team.
+Developed by **Misairi Mulabbi** and team. 
+Contact: **+256700667769**
