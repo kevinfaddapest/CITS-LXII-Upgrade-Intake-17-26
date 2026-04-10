@@ -1,0 +1,753 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔐 CITS Intake 17/26 UPDF Comrades - Record Management System</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+body { background: #f8f9fa; }
+.case-card { margin-bottom: 20px; }
+table td, table th { vertical-align: middle; }
+tfoot tr { font-weight: bold; }
+.modal-lg { max-width: 900px; }
+.table-responsive { max-height: 400px; overflow-y: auto; }
+/* Navbar fixed height is ~56px (Bootstrap default) */
+.sticky-header {
+  position: sticky;
+  top: 10px;   /* 56px navbar + some spacing */
+  background: #f8f9fa;
+  z-index: 1020;
+  padding: 10px 0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* optional shadow */
+}
+
+#casesContainer{
+    margin-top: 10px;
+}
+</style>
+</head>
+<body>
+   
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top shadow-sm">
+  <div class="container-fluid">
+    <span class="navbar-brand">🔐 CITS Intake 17/26 UPDF Comrades - Record Management System</span>
+    <input type="text" id="caseSearch" class="form-control mt-2 mb-3" placeholder="Search by name or relation...">
+    <div class="collapse navbar-collapse">
+      <ul class="navbar-nav ms-auto">
+        {% if user.is_authenticated %}
+          {% if user.is_superuser %}
+            <li class="nav-item"><a class="nav-link" href="{% url 'home' %}"><i class="fa fa-home"></i> Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'daily_updates' %}"><i class="fa fa-eye"></i>Logs</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'online_users' %}">🟢 Online</a></li>
+          {% endif %}
+          <li class="nav-item"><a class="nav-link text-danger" href="{% url 'logout' %}">🚪 Logout</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+    <!-- Cases Cards -->
+    <div id="casesContainer" class="row g-3">
+        {% for case in cases %}
+        <div class="col-md-4 case-card" data-name="{{ case.bereaved_member_name|lower }}" data-relation="{{ case.relation|lower }}">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">{{ case.bereaved_member_name }}</h5>
+                    <p class="card-text">Relation: {{ case.relation }}</p>
+                    <p class="card-text fw-bold">Balance: UGX {{ case.balance }}</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-sm btn-outline-primary edit-case-btn" data-id="{{ case.id }}" data-name="{{ case.bereaved_member_name }}" data-relation="{{ case.relation }}" >Edit</button>
+                        <button class="btn btn-sm btn-outline-danger delete-case-btn" data-id="{{ case.id }}" >Delete</button>
+                        <button class="btn btn-sm btn-outline-success view-contributions-btn" data-id="{{ case.id }}">View</button>
+                        <button class="btn btn-sm btn-outline-dark view-expenditures-btn" data-id="{{ case.id }}">Expenses</button>
+                        <button class="btn btn-sm btn-outline-info add-expenditure-btn" data-id="{{ case.id }}">Add Exp</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p>No cases available.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ---------------- Modals ---------------- -->
+<!-- Edit Case Modal -->
+<div class="modal fade" id="editCaseModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="editCaseForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Record</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" name="case_id" id="editCaseId">
+            <div class="mb-3">
+                <label class="form-label">Member Name</label>
+                <input type="text" name="name" id="editCaseName" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Relation / Details</label>
+                <input type="text" name="relation" id="editCaseRelation" class="form-control" required>
+            </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Contribution Modal -->
+<div class="modal fade" id="contributionModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="contributionForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Add/Edit Contribution</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" name="contribution_id" id="contributionId">
+            <input type="hidden" name="case_id" id="contributionCaseId">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Member Name</label>
+                    <input type="text" name="names" id="contribName" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Rank</label>
+                    <select name="rank" id="contribRank" class="form-control" required>
+                        {% for rank in ranks %}
+                        <option value="{{ rank.id }}">{{ rank.rank_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Contribution Amount</label>
+                    <input type="number" name="contribution" id="contribAmount" class="form-control" required min="0">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+          <span class="me-auto text-danger" id="contribError"></span>
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- Add/Edit Expenditure Modal -->
+<div class="modal fade" id="expenditureModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="expenditureForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Add/Edit Expenditure</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" name="expenditure_id" id="expenditureId">
+            <input type="hidden" name="case_id" id="expenditureCaseId">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Description</label>
+                    <input type="text" name="description" id="expDescription" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Handled By</label>
+                    <input type="text" name="handled_by" id="expHandledBy" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Date</label>
+                    <input type="date" name="date" id="expDate" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Amount</label>
+                    <input type="number" name="amount" id="expAmount" class="form-control" required min="0">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+          <span class="me-auto text-danger" id="expError"></span>
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- Contributions Table Modal -->
+<div class="modal fade" id="contributionsTableModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">Contributions</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body table-responsive">
+          <div class="mb-3">
+              <input type="text" id="contribSearch" class="form-control" placeholder="Search contributions...">
+          </div>
+          <table class="table table-bordered table-hover" id="contributionsTable">
+              <thead class="table-light">
+                  <tr>
+                      <th>Member</th>
+                      <th>Rank</th>
+                      <th>Contribution</th>
+                      <th>Date</th>
+                      <th>Contact</th>
+                      <th>Actions</th>
+                  </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                  <tr>
+                      <td colspan="2">Total</td>
+                      <td id="totalContribution">0</td>
+                      <td colspan="3"></td>
+                  </tr>
+              </tfoot>
+          </table>
+        </div>
+    </div>
+  </div>
+</div>
+
+<!-- Expenditures Table Modal -->
+<div class="modal fade" id="expendituresTableModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg"> <!-- XL for wide tables -->
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">Expenditures</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-3">
+                <input type="text" id="expSearch" class="form-control" placeholder="Search expenditures...">
+            </div>
+            <table class="table table-bordered table-hover nowrap" id="expendituresTable" style="100%%">
+                <thead class="table-light">
+                    <tr>
+                        <th>Description</th>
+                        <th>Handled By</th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Actions</th>
+                        
+                    </tr>
+                </thead>
+                <tbody></tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="3">Total</th>
+                        <th colspan="" id="totalExpenditure">0.00</th>
+                        <th colspan=""></th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  let activeCaseName = '';
+
+const csrftoken = '{{ csrf_token }}';
+
+// ---------------- CASE SEARCH ----------------
+$('#caseSearch').on('keyup', function(){
+    const q = $(this).val().toLowerCase();
+    $('.case-card').each(function(){
+        const name = $(this).data('name');
+        const relation = $(this).data('relation');
+        $(this).toggle(name.includes(q) || relation.includes(q));
+    });
+});
+
+// ---------------- CASE CRUD ----------------
+function refreshCases(){ location.reload(); }
+
+// ---------------- Edit Case ----------------
+$(document).on('click', '.edit-case-btn', function(){
+    const button = $(this);
+    $('#editCaseId').val(button.data('id'));
+    $('#editCaseName').val(button.data('name'));
+    $('#editCaseRelation').val(button.data('relation'));
+
+    // Show modal
+    const editModal = new bootstrap.Modal(document.getElementById('editCaseModal'));
+    editModal.show();
+});
+
+$(document).on('submit', '#editCaseForm', function(e){
+    e.preventDefault();
+
+    const caseId = $('#editCaseId').val();
+    const name = $('#editCaseName').val();
+    const relation = $('#editCaseRelation').val();
+
+    $.ajax({
+        url: '/cases/update/',  // URL should match your Django URL for update_case
+        type: 'POST',
+        data: {
+            id: caseId,
+            bereaved_member_name: name,
+            relation: relation,
+            csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()  // include CSRF
+        },
+        dataType: 'json',
+        success: function(res){
+            if(res.success){
+                // Close modal and refresh cases/cards
+                bootstrap.Modal.getInstance(document.getElementById('editCaseModal')).hide();
+                refreshCases();  // Reload page to see changes
+            } else {
+                alert(res.error || 'Failed to update case');
+            }
+        },
+        error: function(xhr){
+            alert('Server error: ' + xhr.status + ' ' + xhr.statusText);
+        }
+    });
+});
+
+function refreshCases(){
+    location.reload(); // reloads the entire page
+}
+
+$(document).on('click', '.delete-case-btn', function(){
+    if(!confirm("Delete this case?")) return;
+
+    const id = $(this).data('id');
+
+    $.post(
+        "{% url 'delete_case' 0 %}".replace('0', id), 
+        { csrfmiddlewaretoken: csrftoken }, 
+        function(res){
+            if(res.success){
+                // Refresh the entire page
+                location.reload(); 
+            } else {
+                alert(res.error || "Failed to delete case");
+            }
+        }
+    ).fail(function(){
+        alert("Server error while deleting case");
+    });
+});
+
+
+let contribTable, expTable;
+
+// ------------- Contributions ----------------
+$(document).on('click', '.view-contributions-btn', function(){
+    const caseId = $(this).data('id');
+    activeCaseName = $(this).closest('.card').find('.card-title').text(); // 🔥
+
+    $('#contributionCaseId').val(caseId);
+    refreshContributions(caseId);
+    new bootstrap.Modal(document.getElementById('contributionsTableModal')).show();
+});
+
+function refreshContributions(caseId){
+    $.get(`/cases/${caseId}/contributions/`, function(res){
+        const tbody = $('#contributionsTable tbody').empty();
+        let total = 0;
+        res.data.forEach(c => {
+            total += parseFloat(c.contribution);
+            tbody.append(`
+                <tr data-id="${c.id}" data-rank-id="${c.rank_id}">
+                    <td>${c.names}</td>
+                    <td>${c.rank_name}</td>
+                    <td>${c.contribution}</td>
+                    <td>${c.date}</td>
+                    <td>${c.contact}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary edit-contrib-btn">Edit</button>
+                        <button class="btn btn-sm btn-danger delete-contrib-btn">Delete</button>
+                    </td>
+                </tr>
+            `);
+        });
+        $('#totalContribution').text(total.toFixed(2));
+
+        if($.fn.DataTable.isDataTable('#contributionsTable')) contribTable.destroy();
+        contribTable = $('#contributionsTable').DataTable({
+              responsive: true,           // 🔥 enables responsive behavior
+              autoWidth: false,            // 🔥 prevents column overflow
+              scrollX: true,               // 🔥 horizontal scroll fallback
+              dom: 'Bfrtip',
+              paging: true,
+              searching: true,
+              ordering: true,
+              order: [[3,'desc']],
+            footerCallback: function (row, data) {
+                let api = this.api();
+
+                let total = api
+                    .column(2, { search: 'applied' }) // 🔥 ONLY filtered rows
+                    .data()
+                    .reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+
+                $(api.column(2).footer()).html(total.toFixed(2));
+            },
+            
+
+            buttons: [
+    {
+        extend: 'excelHtml5',
+        footer: true,
+        exportOptions: {
+            columns: ':not(:last-child)',
+            search: 'applied' // 🔥 filtered only
+        },
+       title: function () {
+    let q = contribTable.search();
+    let caseName = activeCaseName || 'Unknown Case';
+
+    return q
+        ? `🔐 CITS Intake 17/26 UPDF Comrades\nCase Name: ${caseName}\nFiltered For: ${q}`
+        : `🔐 CITS Intake 17/26 UPDF Comrades\nCase Name: ${caseName}\nAll Records`;
+},
+
+    },
+    {
+        extend: 'pdfHtml5',
+        footer: true,
+        exportOptions: {
+            columns: ':not(:last-child)',
+            search: 'applied'
+        },
+       title: function () {
+    let q = contribTable.search();
+    let caseName = activeCaseName || 'Unknown Case';
+    return q
+        ? `🔐 CITS Intake 17/26 UPDF Comrades\nCase Name: ${caseName}\nFiltered For: ${q}`
+        : `🔐 CITS Intake 17/26 UPDF Comrades\nCase Name: ${caseName}\nAll Records`;
+},
+
+        customize: function (doc) {
+            doc.styles.title = {
+                alignment: 'center',
+                fontSize: 14,
+                bold: true
+            };
+        }
+    },
+    {
+        extend: 'print',
+        footer: true,
+        exportOptions: {
+            columns: ':not(:last-child)',
+            search: 'applied'
+        },
+        title: function () {
+    let q = contribTable.search();
+    let caseName = activeCaseName || 'Unknown Case';
+
+    return q
+        ? `🔐 CITS Intake 17/26 UPDF Comrades\nCase Name: ${caseName}\nFiltered For: ${q}`
+        : `🔐 CITS Intake 17/26 UPDF Comrades\nCase Name: ${caseName}\nAll Records`;
+}
+
+    }
+]
+
+        });
+        
+        $('#contribSearch').off().on('keyup', function(){
+            contribTable.search(this.value).draw();
+        });
+    });
+}
+
+document.getElementById('contributionsTableModal')
+  .addEventListener('hidden.bs.modal', function () {
+      refreshCases();   // reload page
+  });
+
+// ------------- Expenditures ----------------
+
+$(document).on('click', '.view-expenditures-btn', function(){
+    const caseId = $(this).data('id');
+    activeCaseName = $(this).closest('.card').find('.card-title').text();
+
+    $('#expenditureCaseId').val(caseId);
+    refreshExpenditures(caseId);
+
+    new bootstrap.Modal(document.getElementById('expendituresTableModal')).show();
+});
+
+function refreshExpenditures(caseId){
+    $.get(`/cases/${caseId}/expenditures/`, function(res){
+        const tbody = $('#expendituresTable tbody').empty();
+        let total = 0;
+
+        res.data.forEach(e => {
+            total += parseFloat(e.amount);
+            tbody.append(`
+                <tr data-id="${e.id}" data-case-id="${caseId}">
+                    <td>${e.description}</td>
+                    <td>${e.handled_by || ''}</td>
+                    <td>${e.date}</td>
+                    <td>${parseFloat(e.amount).toFixed(2)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary edit-exp-btn" 
+                                data-id="${e.id}" 
+                                data-description="${e.description}" 
+                                data-amount="${e.amount}" 
+                                data-handled_by="${e.handled_by || ''}">Edit</button>
+                        <button class="btn btn-sm btn-danger delete-exp-btn" data-id="${e.id}">Delete</button>
+                    </td>
+                </tr>
+            `);
+        });
+
+        $('#totalExpenditure').text(total.toFixed(2));
+
+        if ($.fn.DataTable.isDataTable('#expendituresTable')) expTable.destroy();
+
+        expTable = $('#expendituresTable').DataTable({
+            responsive: true,
+            autoWidth: false,
+            scrollX: true,
+            dom: 'Bfrtip',
+            paging: true,
+            searching: true,
+            ordering: true,
+            order: [[3,'desc']],
+            footerCallback: function(row, data){
+                let api = this.api();
+                let total = api.column(3, { search: 'applied' }).data()
+                               .reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+                $(api.column(3).footer()).html(total.toFixed(2));
+            },
+            buttons: [
+                {
+                    extend: 'excelHtml5',
+                    footer: true,
+                    exportOptions: { columns: ':not(:last-child)', search: 'applied' },
+                    title: function(){
+                        let q = expTable.search();
+                        let caseName = activeCaseName || 'Unknown Case';
+                        return q
+                            ? `🔐 CITS Intake 17/26 UPDF Comrades\nCase: ${caseName}\nFiltered For: ${q}`
+                            : `🔐 CITS Intake 17/26 UPDF Comrades\nCase Name: ${caseName}\nAll Expenditure Records`;
+                    }
+                },
+                {
+                    extend: 'pdfHtml5',
+                    footer: true,
+                    exportOptions: { columns: ':not(:last-child)', search: 'applied' },
+                    title: function(){
+                        let q = expTable.search();
+                        let caseName = activeCaseName || 'Unknown Case';
+                        return q
+                            ? `🔐 CITS Intake 17/26 UPDF Comrades\nCase Name: ${caseName}\nFiltered For: ${q}`
+                            : `🔐 CITS Intake 17/26 UPDF Comrades\nCase Name: ${caseName}\nAll Expenditure Records`;
+                    },
+                    customize: function(doc){
+                        doc.styles.title = { alignment:'center', fontSize:14, bold:true };
+                    }
+                },
+                {
+                    extend: 'print',
+                    footer: true,
+                    exportOptions: { columns: ':not(:last-child)', search: 'applied' },
+                    title: function(){
+                        let q = expTable.search();
+                        let caseName = activeCaseName || 'Unknown Case';
+                        return q
+                            ? `🔐 CITS Intake 17/26 UPDF Comrades\nCase Name: ${caseName}\nFiltered For: ${q}`
+                            : `🔐 CITS Intake 17/26 UPDF Comrades\nCase Name: ${caseName}\nAll Expenditure Records`;
+                    }
+                }
+            ]
+        });
+
+        // Live search
+        $('#expSearch').off().on('keyup', function(){
+            expTable.search(this.value).draw();
+        });
+    });
+}
+
+document.getElementById('expendituresTableModal').addEventListener('hidden.bs.modal', function () {
+    refreshCases();
+});
+
+
+// ----- Contribution Handlers -----
+$(document).on('click', '.view-contributions-btn', function(){
+    const caseId = $(this).data('id');
+    $('#contributionCaseId').val(caseId);
+    refreshContributions(caseId);
+    new bootstrap.Modal(document.getElementById('contributionsTableModal')).show();
+});
+
+// ----- NEW: View Expenditures Handler -----
+$(document).on('click', '.view-expenditures-btn', function(){
+    const caseId = $(this).data('id');
+    $('#expenditureCaseId').val(caseId);
+    refreshExpenditures(caseId);
+    new bootstrap.Modal(document.getElementById('expendituresTableModal')).show();
+});
+
+// ----- Expenditure Handlers (Add/Edit) -----
+$(document).on('click', '.add-expenditure-btn, .edit-exp-btn', function(){
+    const isEdit = $(this).hasClass('edit-exp-btn');
+    $('#expenditureForm')[0].reset();
+    $('#expError').text('');
+
+    if(isEdit){
+        const id = $(this).data('id');
+        $('#expenditureId').val(id);
+        $('#expenditureCaseId').val($(this).closest('tr').data('case-id'));
+        $('#expDescription').val($(this).data('description'));
+        $('#expHandledBy').val($(this).data('handled_by'));
+        $('#expAmount').val($(this).data('amount'));
+    } else {
+        $('#expenditureId').val('');
+        $('#expenditureCaseId').val($(this).data('id'));
+    }
+    new bootstrap.Modal(document.getElementById('expenditureModal')).show();
+});
+
+$(document).on('submit', '#expenditureForm', function(e){
+    e.preventDefault();
+    const amount = parseFloat($('#expAmount').val());
+    if(isNaN(amount) || amount <= 0){ 
+        $('#expError').text('Amount must be > 0'); 
+        return; 
+    }
+    $.post("{% url 'add_or_update_expenditure' %}", $(this).serialize(), function(res){
+        if(res.status==='success'){
+            refreshExpenditures($('#expenditureCaseId').val());
+            bootstrap.Modal.getInstance(document.getElementById('expenditureModal')).hide();
+        } else $('#expError').text(res.message);
+    });
+});
+ // Disable right-click with SweetAlert2
+  document.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    Swal.fire({
+      icon: 'info',
+      title: 'Disabled',
+      text: 'Right-click has been disabled on this system.',
+      timer: 2000,
+      showConfirmButton: false
+    });
+  });
+
+  // Disable DevTools keyboard shortcuts
+  document.addEventListener('keydown', function (e) {
+    if (
+      e.key === 'F12' ||                                       // F12
+      (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key)) ||  // Ctrl+Shift+I/J/C
+      (e.ctrlKey && e.key.toLowerCase() === 'u')              // Ctrl+U
+    ) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Access Denied',
+        text: 'This action is disabled on this system.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+  });
+   (function () {
+    let check = function () {
+      let before = new Date().getTime();
+      debugger;
+      let after = new Date().getTime();
+      if (after - before > 100) {
+        document.body.innerHTML = "<h1 style='text-align:center; color:red;'>🚫 Access Not Allowed! Contact Your Administrator for help on 0700667769</h1>";
+      }
+    };
+    setInterval(check, 1000);
+  })();
+ 
+  document.addEventListener('keydown', function (e) {
+    // Block Alt + Arrow navigation
+    if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Navigation Blocked',
+        text: 'Alt + Arrow keys are disabled.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+
+    // Block Backspace outside of input/textarea
+    if (e.key === 'Backspace' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'info',
+        title: 'Disabled',
+        text: 'Back navigation using Backspace is blocked.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  });
+
+  // Block browser history back/forward buttons
+  if (window.history && window.history.pushState) {
+    window.history.pushState(null, null, window.location.href);
+    window.onpopstate = function () {
+      window.history.pushState(null, null, window.location.href);
+      Swal.fire({
+        icon: 'info',
+        title: 'Navigation Blocked',
+        text: 'Browser history navigation is disabled.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    };
+  }
+
+  // Attempt to blur the address bar (will not prevent copying the URL entirely)
+  window.addEventListener('blur', () => {
+    window.focus();
+  });
+</script>
+</body>
+</html>
+{% endblock %}

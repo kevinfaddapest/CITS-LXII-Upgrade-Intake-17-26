@@ -1,0 +1,784 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>🔐 CITS Intake 17/26 UPDF Comrades - Record Management System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+  
+
+ <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: #f8f9fa;
+      padding-top: 350px;
+    }
+    .fixed-header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background: #fff;
+      padding: 5px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      z-index: 999;
+    }
+    .table-container {
+      max-height: 600px;
+      overflow-x: auto;
+      overflow-y: auto;
+      background: #fff;
+      padding: 5px;
+      border-radius: 5px;
+    }
+    .table thead th {
+      position:sticky;
+      top: 0;
+      background: #343a40;
+      color: #fff;
+      z-index: 10;
+      white-space: nowrap;
+    }
+    .table td {
+      white-space: nowrap;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- CSRF token for JS -->
+{% csrf_token %}
+
+<!-- Fixed Header -->
+<div class="fixed-header">
+  <div class="container">
+    <h2 class="text-center mb-3">🔐 CITS Intake 17/26 UPDF Comrades - Record Management System</h2>
+    {% include 'messages.html' %}
+    <p class="text-center text-muted">Welcome, {{ request.user.username }}!</p>
+
+    <div class="d-flex justify-content-between mb-2">
+      <div class="d-flex">
+        {% if user.is_authenticated %}
+          {% if user.is_superuser %}
+            <a href="{% url 'register' %}" class="btn btn-success btn-sm me-2">➕ User</a>
+            <button class="btn btn-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addCaseModal">➕ Case</button>
+            <button class="btn btn-secondary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addRankModal">➕ Rank</button>
+          {% endif %}
+          <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm me-2">Logout</a>
+        {% else %}
+          <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Contribution Form -->
+    <form method="post" class="row g-2 bg-white p-3 rounded shadow-sm">
+  {% csrf_token %}
+  {% for field in contribution_form %}
+    <div class="col-md-3">
+      {{ field.label_tag }} {{ field }}
+      {% if field.errors %}
+        <div class="text-danger small">{{ field.errors }}</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <div class="col-md-3 d-flex align-items-end">
+    <button type="submit" class="btn btn-success btn-sm w-50">Submit</button>
+  </div>
+
+  <input type="hidden" name="submit_contribution" value="1" />
+</form>
+
+    <div class="d-flex justify-content-between mt-2 align-items-center">
+      <input type="text" id="searchInput" class="form-control w-50" placeholder="Search..." />
+      <div>
+         {% if request.user.is_superuser %}
+    <a href="{% url 'online_users' %}" class="btn btn-outline-primary btn-sm me-2">🟢Online Users</a>
+    {% endif %}
+       {% if request.user.is_superuser %}
+        <button class="btn btn-outline-success btn-sm me-2" data-bs-toggle="modal" data-bs-target="#userListModal">
+          <i class="fas fa-eye"></i> View Users
+        </button>
+
+        {% endif %}
+        <a href="{% url 'view_cases' %}" class="btn btn-outline-primary btn-sm me-2">📂 View Cases</a>
+        {% if user.is_superuser %}
+        <button class="btn btn-outline-success btn-sm me-2" onclick="triggerSystemBackup()">💾 Backup</button>
+         {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Case Modal -->
+<div class="modal fade" id="addCaseModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'add_case' %}" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title">➕ Add New Case</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          {{ case_form.bereaved_member_name.label_tag }} {{ case_form.bereaved_member_name }}
+          {% if case_form.bereaved_member_name.errors %}
+          <div class="text-danger small">{{ case_form.bereaved_member_name.errors }}</div>
+          {% endif %}
+        </div>
+        <div class="mb-3">
+          {{ case_form.relation.label_tag }} {{ case_form.relation }}
+          {% if case_form.relation.errors %}
+          <div class="text-danger small">{{ case_form.relation.errors }}</div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-success" type="submit">Save</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Rank Modal -->
+<div class="modal fade" id="addRankModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'add_rank' %}" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title">➕ Add New Rank</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          {{ rank_form.rank_name.label_tag }} {{ rank_form.rank_name }}
+          {% if rank_form.rank_name.errors %}
+          <div class="text-danger small">{{ rank_form.rank_name.errors }}</div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" type="submit">Add Rank</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- Registered Users Modal --> 
+<div class="modal fade" id="userListModal" tabindex="-1" aria-labelledby="userListModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl"> <!-- Use modal-xl for wide table -->
+    <div class="modal-content">
+
+      <!-- Header with Home and Download -->
+      <div class="modal-header d-flex flex-wrap justify-content-between align-items-center">
+        <h5 class="modal-title mb-2 mb-md-0" id="userListModalLabel">👥 Registered Users</h5>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{% url 'home' %}" class="btn btn-sm btn-outline-primary">🏠 Home</a>
+          <button class="btn btn-sm btn-outline-success" onclick="downloadUsers()">⬇️ Download</button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+      </div>
+
+      <!-- Body with responsive table -->
+      <div class="modal-body">
+        {% if users %}
+        <div class="table-responsive">
+          <table class="table table-bordered table-striped" id="usersTable">
+            <thead class="table-dark">
+              <tr>
+                <th>#</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Last Login</th>
+                <th>Superuser</th>
+                <th>Staff</th>
+                <th>Active</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for user in users %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.last_login|date:"Y-m-d H:i" }}</td>
+                <td>{{ user.is_superuser }}</td>
+                <td>{{ user.is_staff }}</td>
+                <td>{{ user.is_active }}</td>
+                <td>
+                  <a href="{% url 'admin:auth_user_password_change' user.id %}" class="btn btn-sm btn-primary">🔒Update</a>
+                  <button class="btn btn-sm btn-danger logoutUserBtn" data-id="{{ user.id }}">⛔Logout</button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted">No users found.</p>
+        {% endif %}
+      </div>
+
+      <!-- CSRF Token Hidden Input -->
+      <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+
+      <!-- Footer -->
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Contributions table & modals will follow below this section -->
+
+<div class="container">
+  <div class="table-container mt-2">
+    <table id="contributionTable" class="table table-bordered table-striped">
+      <thead class="table-dark">
+        <tr>
+          <th colspan="5" class="text-center">📋 Contributions</th>
+        </tr>
+        <tr>
+          <th>#</th>
+          <th>Rank</th>
+          <th>Name</th>
+          <th>Contact</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for contribution in contributions %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ contribution.rank.rank_name }}</td>
+          <td>{{ contribution.names }}</td>
+          <td>{{ contribution.contact }}</td>
+          <td>
+  <div class="d-flex gap-1">
+    <button class="btn btn-sm btn-outline-info viewBtn" data-name="{{ contribution.names }}">
+      <i class="fa fa-eye"></i> View
+    </button>
+
+    {% if user.is_superuser %}
+    <button class="btn btn-sm btn-outline-primary editMainBtn"
+            data-id="{{ contribution.id }}"
+            data-rank="{{ contribution.rank.id }}"
+            data-name="{{ contribution.names }}"
+            data-contact="{{ contribution.contact }}">
+      <i class="fa fa-edit"></i> Edit
+    </button>
+    {% endif %}
+  </div>
+</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center">No contributions found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2"><strong>Grand Total:</strong></td>
+          <td colspan="3" class="text-success"><strong>UGX {{ total|floatformat:2 }}</strong></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- Edit Contribution Modal -->
+<div class="modal fade" id="editMainContributionModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      
+      <div class="modal-header">
+        <h5 class="modal-title">✏ Edit Contribution Member</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="editContributionId">
+
+        <div class="mb-3">
+          <label>Rank</label>
+          <select id="editRank" class="form-select">
+            {% for rank in ranks %}
+              <option value="{{ rank.id }}">{{ rank.rank_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label>Name</label>
+          <input type="text" id="editName" class="form-control">
+        </div>
+
+        <div class="mb-3">
+          <label>Contact</label>
+          <input type="text" id="editContact" class="form-control">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-success" id="saveMainEditBtn">Update</button>
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Member Contributions Modal -->
+<div class="modal fade" id="contributionsModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Contributions for <span id="contributionName"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" class="form-control mb-3" id="memberSearchInput" placeholder="🔍 Search in contributions..." />
+        <div class="modal-footer">
+         <button class="btn btn-outline-primary btn-sm me-2" id="downloadMemberData">💾 Download</button>
+         <button class="btn btn-outline-danger btn-sm me-2" data-bs-dismiss="modal">Close</button>
+      </div>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+          <table class="table table-striped table-sm" id="memberContributionTable">
+            <thead class="table-dark">
+              <tr>
+                <th>Case</th>
+                <th>Contribution</th>
+                <th>Date</th>
+                <th>Contact</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot class="table-light fw-bold">
+              <tr>
+                <td>Grand Total</td>
+                <td id="grandTotalAmount" class="text-success">0.00</td>
+                <td colspan="3"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- store the current active user's name in a hidden span -->
+<span id="activeUser" style="display:none">{{ user.get_full_name|default:user.username }}</span>
+
+
+<script>
+
+  /* =====================================================
+     SYSTEM BACKUP
+  ===================================================== */
+ function triggerSystemBackup() {
+  fetch("{% url 'backup_system' %}")
+    .then(r => r.json())
+    .then(data =>
+      Swal.fire({
+        icon: data.status === 'success' ? 'success' : 'error',
+        title: data.message
+      })
+    )
+    .catch(err =>
+      Swal.fire({ icon: 'error', title: err.toString() })
+    );
+}
+
+$(document).ready(function() {
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+$.ajaxSetup({
+    headers: {
+        'X-CSRFToken': getCookie('csrftoken')
+    }
+});
+
+/* ===============================
+   OPEN EDIT MAIN CONTRIBUTION
+=============================== */
+$(document).on('click', '.editMainBtn', function () {
+
+  $('#editContributionId').val($(this).data('id'));
+  $('#editRank').val($(this).data('rank'));
+  $('#editName').val($(this).data('name'));
+  $('#editContact').val($(this).data('contact'));
+
+  const modalEl = document.getElementById('editMainContributionModal');
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  modal.show();
+});
+
+
+/* ===============================
+   SAVE EDITED MAIN CONTRIBUTION
+=============================== */
+$('#saveMainEditBtn').on('click', function () {
+
+  const id = $('#editContributionId').val();
+
+  const data = {
+    rank: $('#editRank').val(),
+    names: $('#editName').val(),
+    contact: $('#editContact').val()
+  };
+
+  $.post(`/edit_main_contribution/${id}/`, data)
+    .done(function (response) {
+      if (response.status === 'success') {
+        Swal.fire('Updated!', response.message, 'success')
+          .then(() => location.reload());
+      } else {
+        Swal.fire('Error', response.message, 'error');
+      }
+    })
+    .fail(function () {
+      Swal.fire('Error', 'Something went wrong.', 'error');
+    });
+});
+
+
+  /* ===============================
+     HELPER: UPDATE GRAND TOTAL
+  =============================== */
+  function updateGrandTotal() {
+    let total = 0;
+
+    $('#memberContributionTable tbody tr:visible').each(function () {
+      const input = $(this).find('.contributionInput');
+      if (!input.length) return;
+
+      const raw = input.val().toString().replace(/,/g, '');
+      const amount = parseFloat(raw);
+      if (!isNaN(amount)) total += amount;
+    });
+
+    $('#grandTotalAmount').text(
+      total.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })
+    );
+  }
+
+  /* ===============================
+     MAIN TABLE SEARCH (if needed)
+  =============================== */
+  $('#searchInput').on('keyup', function () {
+    const q = $(this).val().toLowerCase();
+    $('#contributionTable tbody tr').each(function () {
+      $(this).toggle($(this).text().toLowerCase().includes(q));
+    });
+  });
+
+  /* ===============================
+     OPEN MEMBER MODAL
+  =============================== */
+ $(document).on('click', '.viewBtn', function () {
+  const name = $(this).data('name');
+  const url = `/member_contributions_api/${encodeURIComponent(name)}/`;
+
+  $('#contributionName').text(name);
+  $('#memberSearchInput').val('');
+  $('#memberContributionTable tbody').empty();
+  $('#grandTotalAmount').text('0.00');
+
+  $.get(url).done(function(res) {
+    if (res.status !== 'success' || !res.data.length) {
+      Swal.fire('No Data', 'No contributions found.', 'info');
+      return;
+    }
+
+    // Sort descending by date (most recent first)
+    const sortedData = res.data.sort((a, b) => {
+      return new Date(b.date) - new Date(a.date); // descending
+    });
+
+    // Alternative: sort by contribution amount descending
+    // const sortedData = res.data.sort((a, b) => parseFloat(b.contribution) - parseFloat(a.contribution));
+
+    const rows = sortedData.map(c => `
+      <tr data-id="${c.id}">
+        <td>${c.case}</td>
+        <td>
+          <input type="number" step="0.01"
+                 class="form-control form-control-sm contributionInput"
+                 value="${c.contribution}">
+        </td>
+        <td>
+          <input type="text"
+                 class="form-control form-control-sm dateInput"
+                 value="${c.date}">
+        </td>
+        <td>
+          <input type="text"
+                 class="form-control form-control-sm contactInput"
+                 value="${c.contact}">
+        </td>
+        <td>
+          {% if user.is_superuser %}
+          <button class="btn btn-sm btn-success updateBtn">Save</button>
+          <button class="btn btn-sm btn-danger deleteBtn">Delete</button>
+          {% endif %}
+        </td>
+      </tr>
+    `).join('');
+
+    $('#memberContributionTable tbody').html(rows);
+
+    // Show modal
+    const modalEl = document.getElementById('contributionsModal');
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+
+    // Calculate total after modal is fully visible
+    modalEl.addEventListener('shown.bs.modal', function() {
+      updateGrandTotal();
+    }, { once: true });
+
+  }).fail(() => {
+    Swal.fire('Error', 'Failed to load contributions.', 'error');
+  });
+});
+
+  /* ===============================
+     LIVE TOTAL UPDATE ON INPUT CHANGE
+  =============================== */
+  $(document).on('input', '.contributionInput', updateGrandTotal);
+
+  /* ===============================
+     FILTER CONTRIBUTIONS IN MODAL
+  =============================== */
+  $('#memberSearchInput').on('keyup', function () {
+    const query = $(this).val().toLowerCase();
+    $('#memberContributionTable tbody tr').each(function () {
+      $(this).toggle($(this).text().toLowerCase().includes(query));
+    });
+    updateGrandTotal();
+  });
+
+  /* ===============================
+     UPDATE CONTRIBUTION (SAVE)
+  =============================== */
+  $(document).on('click', '.updateBtn', function() {
+    const row = $(this).closest('tr');
+    const id = row.data('id');
+
+    const data = {
+      contribution: row.find('.contributionInput').val(),
+      date: row.find('.dateInput').val(),
+      contact: row.find('.contactInput').val(),
+      csrfmiddlewaretoken: '{{ csrf_token }}'
+    };
+
+    $.post(`/update_contribution/${id}/`, data).done(r => {
+      Swal.fire(r.status === 'success' ? 'Updated' : 'Error', r.message, r.status);
+      updateGrandTotal();
+    });
+  });
+
+  /* ===============================
+     DELETE CONTRIBUTION
+  =============================== */
+  $(document).on('click', '.deleteBtn', function() {
+    const row = $(this).closest('tr');
+    const id = row.data('id');
+
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'This contribution will be deleted!',
+      icon: 'warning',
+      showCancelButton: true
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      $.post(`/delete_contribution/${id}/`, { csrfmiddlewaretoken: '{{ csrf_token }}' })
+       .done(r => {
+         if (r.status === 'success') {
+           row.remove();
+           updateGrandTotal();
+           Swal.fire('Deleted', r.message, 'success');
+         } else {
+           Swal.fire('Error', r.message, 'error');
+         }
+       });
+    });
+  });
+
+  /* ===============================
+     PDF DOWNLOAD (MODAL)
+  =============================== */
+  $('#downloadMemberData').on('click', function() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const member = $('#contributionName').text();
+    const total = $('#grandTotalAmount').text();
+    const downloadDate = new Date().toLocaleString();
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(150, 75, 0);
+    doc.text(`CITS Intake 17/26 UPDF Comrades \nDownloaded on: ${downloadDate}`, 200, 15, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(18);
+    doc.text(`Member Contributions`, 14, 15);
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(0, 0, 255);
+    doc.text(`Name: ${member}`, 14, 25);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Grand Total: UGX ${total}`, 14, 32);
+    doc.setFont(undefined, 'normal'); // reset for table
+
+    const tableData = [];
+    $('#memberContributionTable tbody tr:visible').each(function() {
+      tableData.push([
+        $(this).find('td:eq(0)').text(),
+        $(this).find('.contributionInput').val(),
+        $(this).find('.dateInput').val(),
+        $(this).find('.contactInput').val()
+      ]);
+    });
+
+    doc.autoTable({
+      startY: 40,
+      head: [['Case', 'Contribution', 'Date', 'Contact']],
+      body: tableData,
+      theme: 'grid'
+    });
+
+    doc.save(`Contributions_${member.replace(/\s+/g, '_')}.pdf`);
+  });
+
+});
+
+
+  // Disable right-click with SweetAlert2
+  document.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    Swal.fire({
+      icon: 'info',
+      title: 'Disabled',
+      text: 'Right-click has been disabled on this system.',
+      timer: 2000,
+      showConfirmButton: false
+    });
+  });
+
+  // Disable DevTools keyboard shortcuts
+  document.addEventListener('keydown', function (e) {
+    if (
+      e.key === 'F12' ||                                       // F12
+      (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key)) ||  // Ctrl+Shift+I/J/C
+      (e.ctrlKey && e.key.toLowerCase() === 'u')              // Ctrl+U
+    ) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Access Denied',
+        text: 'This action is disabled on this system.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+  });
+   (function () {
+    let check = function () {
+      let before = new Date().getTime();
+      debugger;
+      let after = new Date().getTime();
+      if (after - before > 100) {
+        document.body.innerHTML = "<h1 style='text-align:center; color:red;'>🚫 Access Not Allowed! Contact Your Administrator for help on 0700667769</h1>";
+      }
+    };
+    setInterval(check, 1000);
+  })();
+ 
+  document.addEventListener('keydown', function (e) {
+    // Block Alt + Arrow navigation
+    if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Navigation Blocked',
+        text: 'Alt + Arrow keys are disabled.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+
+    // Block Backspace outside of input/textarea
+    if (e.key === 'Backspace' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'info',
+        title: 'Disabled',
+        text: 'Back navigation using Backspace is blocked.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  });
+
+  // Block browser history back/forward buttons
+  if (window.history && window.history.pushState) {
+    window.history.pushState(null, null, window.location.href);
+    window.onpopstate = function () {
+      window.history.pushState(null, null, window.location.href);
+      Swal.fire({
+        icon: 'info',
+        title: 'Navigation Blocked',
+        text: 'Browser history navigation is disabled.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    };
+  }
+
+  // Attempt to blur the address bar (will not prevent copying the URL entirely)
+  window.addEventListener('blur', () => {
+    window.focus();
+  });
+</script>
+
+
+</body>
+</html>

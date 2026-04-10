@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4">📅 Detailed Daily Activity Log</h3>
+
+    {% if activities %}
+    <table class="table table-bordered table-hover table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>User</th>
+                <th>Action</th>
+                <th>Model</th>
+                <th>Object ID</th>
+                <th>Description</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for activity in activities %}
+            <tr>
+                <td>{{ activity.user.username }}</td>
+                <td>{{ activity.get_action_display }}</td>
+                <td>{{ activity.model_name }}</td>
+                <td>{{ activity.object_id }}</td>
+                <td>{{ activity.description }}</td>
+                <td>{{ activity.timestamp|date:"Y-m-d H:i:s" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <div class="alert alert-info">No activities recorded today.</div>
+    {% endif %}
+</div>
+{% endblock %}

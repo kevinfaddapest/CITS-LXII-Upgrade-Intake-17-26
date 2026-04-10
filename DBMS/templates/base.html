@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}🔐 CITS Intake 17/26 UPDF Comrades - Record Management System{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <span class="navbar-brand">🔐 CITS Intake 17/26 UPDF Comrades - Record Management System</span>
+    <div class="collapse navbar-collapse">
+      <ul class="navbar-nav ms-auto">
+        {% if user.is_authenticated %}
+          {% if user.is_superuser %}
+            <li class="nav-item"><a class="nav-link"  href="{% url 'home' %}" class="btn btn-primary btn-sm me-2"><i class="fa fa-home"></i> Home</a></li>
+            <li class="nav-item"><a class="nav-link"  href="{% url 'daily_updates' %}" class="btn btn-primary btn-sm me-2"><i class="fa fa-eye"></i>View Logs</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'online_users' %}">🟢 Online Users</a></li>
+            {% endif %}
+          <li class="nav-item"><a class="nav-link text-danger" href="{% url 'logout' %}">🚪 Logout</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-4">
+  {% block content %}{% endblock %}
+</div>
+
+<script>
+  // === Inactivity Auto-Logout with Countdown ===
+  let timeoutDuration = 180000; // 3 minutes
+  let warningDuration = 30000;  // 30 seconds before logout
+  let inactivityTimeout, warningTimeout;
+
+  function resetInactivityTimer() {
+    clearTimeout(inactivityTimeout);
+    clearTimeout(warningTimeout);
+
+    warningTimeout = setTimeout(() => {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Inactivity Warning',
+        text: 'You will be logged out in 30 seconds. Do something to stay logged in.',
+        timer: 30000,
+        showConfirmButton: false
+      });
+    }, timeoutDuration - warningDuration);
+
+    inactivityTimeout = setTimeout(() => {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Session Expired',
+        text: 'You have been logged out due to inactivity.',
+        timer: 3000,
+        showConfirmButton: false
+      }).then(() => {
+        window.location.href = "{% url 'logout' %}";
+      });
+    }, timeoutDuration);
+  }
+
+  // Reset timer on user interaction
+  document.onload = resetInactivityTimer;
+  document.onmousemove = resetInactivityTimer;
+  document.onkeypress = resetInactivityTimer;
+  document.onclick = resetInactivityTimer;
+  document.onscroll = resetInactivityTimer;
+
+  // === Disable Right Click ===
+  document.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    Swal.fire({
+      icon: 'info',
+      title: 'Disabled',
+      text: 'Right-click has been disabled on this system.',
+      timer: 2000,
+      showConfirmButton: false
+    });
+  });
+
+  // === Block DevTools Shortcuts ===
+  document.addEventListener('keydown', function (e) {
+    if (
+      e.key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key)) ||
+      (e.ctrlKey && e.key.toLowerCase() === 'u')
+    ) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Access Denied',
+        text: 'This action is disabled on this system.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+
+    // Block Alt + Arrow navigation
+    if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Navigation Blocked',
+        text: 'Alt + Arrow keys are disabled.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+
+    // Block Backspace outside input/textarea
+    if (e.key === 'Backspace' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'info',
+        title: 'Disabled',
+        text: 'Back navigation using Backspace is blocked.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  });
+
+  // === Block Browser History Back/Forward ===
+  if (window.history && window.history.pushState) {
+    window.history.pushState(null, null, window.location.href);
+    window.onpopstate = function () {
+      window.history.pushState(null, null, window.location.href);
+      Swal.fire({
+        icon: 'info',
+        title: 'Navigation Blocked',
+        text: 'Browser history navigation is disabled.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    };
+  }
+
+  // === Detect DevTools using Debugger Trap ===
+  (function () {
+    let check = function () {
+      let before = new Date().getTime();
+      debugger;
+      let after = new Date().getTime();
+      if (after - before > 100) {
+        document.body.innerHTML = "<h1 style='text-align:center; color:red;'>🚫 Access Not Allowed! Contact Your Administrator for help on 0700667769</h1>";
+      }
+    };
+    setInterval(check, 1000);
+  })();
+
+  // === Prevent switching tabs/windows ===
+  window.addEventListener('blur', () => {
+    window.focus();
+  });
+</script>
+
+</body>
+</html>

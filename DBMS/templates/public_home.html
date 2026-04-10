@@ -1,0 +1,137 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🔐 CITS Intake 17/26 UPDF Comrades - Record Management System - Public Page</title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.css"/>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick-theme.css"/>
+
+  <style>
+    body { font-family: "Poppins", sans-serif; margin:0; background:#f5f7fa; color:#333; }
+    header { background:#004aad; padding:20px; text-align:center; color:white; }
+    header h1 { margin:0; font-size:2em; }
+    nav a { color:white; text-decoration:none; padding:10px 20px; border-radius:5px; background:#007BFF; }
+    .hero { background: url("{% static 'images/CITS3.jpg' %}") center/cover no-repeat; height:70vh; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; text-align:center; position:relative; }
+    .hero::after { content:""; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:0; }
+    .hero h2, .hero p, .hero a, .login-card { position:relative; z-index:1; }
+    .hero h2 { font-size:2.5em; margin-bottom:10px; }
+    .hero p { font-size:1.2em; margin-bottom:20px; }
+    .hero a { display:inline-block; margin-top:15px; padding:12px 25px; background:#007BFF; color:white; text-decoration:none; border-radius:30px; }
+    .login-card { background:white; color:#333; padding:25px; border-radius:10px; box-shadow:0 0 20px rgba(0,0,0,0.3); margin-top:20px; width:280px; text-align:center; }
+    .login-card a { display:block; margin-top:15px; padding:10px; background:#007BFF; color:white; text-decoration:none; border-radius:5px; }
+    .welcome { text-align:center; padding:50px 20px; }
+    .welcome img.logo { width:150px; margin-top:20px; border-radius:10px; }
+    .slider { width:85%; margin:40px auto; }
+    .slider img { width:100%; height:400px; border-radius:10px; object-fit:cover; }
+    .info { text-align:center; padding:50px; background:white; width:85%; margin:40px auto; border-radius:10px; box-shadow:0 0 15px rgba(0,0,0,0.1); }
+    .features { display:flex; flex-wrap:wrap; justify-content:center; gap:30px; background:#eaf3ff; padding:50px 20px; }
+    .feature { background:white; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); width:250px; padding:20px; text-align:center; transition:0.3s; }
+    .feature:hover { transform:translateY(-5px); }
+    .feature i { width:60px; margin-bottom:15px; }
+    .testimonials { width:80%; margin:50px auto; text-align:center; }
+    .testimonial { background:white; padding:30px; border-radius:10px; box-shadow:0 0 15px rgba(0,0,0,0.1); margin:10px; }
+    .contact { text-align:center; background:#425879FF; color:white; padding:50px 20px; }
+    .contact a { color:#ffda44; text-decoration:none; font-weight:bold; }
+    footer { text-align:center; padding:15px; background:#007BFF; color:white; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🔐 CITS Intake 17/26 UPDF Comrades - Record Management System</h1>
+</header>
+
+<section class="hero">
+  <h2>Secure & Efficient Record Management</h2>
+  <p>Organize, track, and protect your important records with ease.</p>
+
+  <div class="login-card">
+    <h3>Access Your Account</h3>
+    <p>Click below to log in to the system.</p>
+    <a href="{% url 'login' %}">Login Here!</a>
+</div>
+
+  <a href="#services">Learn More</a>
+</section>
+
+<main>
+  <section class="welcome">
+    <h2>Welcome to CITS Intake 17/26 UPDF Comrades - Record Management System</h2>
+    <p>Your trusted system for record keeping and management.</p>
+    <img src="{% static 'images/CITS2.jpg' %}" alt="CITS Intake 17/26 UPDF Comrades Logo" class="logo">
+  </section>
+
+  <section class="slider">
+    <div><img src="{% static 'images/CITS3.jpg' %}" alt="Slide 2"></div>
+    <div><img src="{% static 'images/CITS2.jpg' %}" alt="Slide 3"></div>
+  </section>
+
+  <section id="services" class="info">
+    <h2>Our Services</h2>
+    <p>Manage personnel records, mission logs, and sensitive information securely and efficiently.</p>
+  </section>
+
+  <section class="features">
+    <div class="feature">
+      <i class="fa-solid fa-lock fa-3x" style="color:#007BFF;"></i>
+      <h3>Secure</h3>
+      <p>Your data is protected with top-level security protocols.</p>
+    </div>
+    <div class="feature">
+      <i class="fa-solid fa-bolt fa-3x" style="color:#28a745;"></i>
+      <h3>Fast Access</h3>
+      <p>Retrieve records quickly with our optimized database system.</p>
+    </div>
+    <div class="feature">
+      <i class="fa-solid fa-chart-line fa-3x" style="color:#ffc107;"></i>
+      <h3>Analytics</h3>
+      <p>Generate insightful reports and track performance effortlessly.</p>
+    </div>
+  </section>
+
+  <section class="testimonials">
+    <h2>What Our Users Say</h2>
+    <div class="slider testimonials-slider">
+      <div class="testimonial">
+        <p>“This system makes managing records so much easier and secure.”</p>
+        <h4>Cpl. Misairi  Mulabbi</h4>
+      </div>
+      <div class="testimonial">
+        <p>“Fast, reliable, and extremely user-friendly.”</p>
+        <h4>Cpl. Misairi  Mulabbi</h4>
+      </div>
+      <div class="testimonial">
+        <p>“Highly recommended for all units needing efficient record management.”</p>
+        <h4>Cpl. Misairi  Mulabbi</h4>
+      </div>
+    </div>
+  </section>
+
+  <section class="contact">
+    <h2>Contact Us</h2>
+    <p>📍 HQ, Lugazi, Uganda</p>
+    <p>📞 +256 700 667 769</p>
+    <p>📧 <a href="mailto:kevinfaddapest@gmail.com">admin@citsintake1726updfcomrades.com</a></p>
+  </section>
+</main>
+
+<footer>
+  <p>🔐 © 2026 CITS Intake 17/26 UPDF Comrades - Record Management System | Public Landing Page </p>
+</footer>
+
+<!-- JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
+<script>
+$(document).ready(function(){
+  $('.slider').slick({ autoplay:true, autoplaySpeed:3000, dots:true, arrows:true, infinite:true });
+  $('.testimonials-slider').slick({ autoplay:true, autoplaySpeed:4000, dots:true, arrows:false, infinite:true, adaptiveHeight:true });
+});
+</script>
+</body>
+</html>

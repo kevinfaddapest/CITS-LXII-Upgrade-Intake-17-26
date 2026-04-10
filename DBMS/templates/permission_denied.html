@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+  <div class="alert alert-danger text-center">
+    <h4>🚫 Access Denied</h4>
+    <p>You do not have permission to view this page.</p>
+  </div>
+</div>
+{% endblock %}
+<script>
+  // Disable right-click with SweetAlert2
+  document.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    Swal.fire({
+      icon: 'info',
+      title: 'Disabled',
+      text: 'Right-click has been disabled on this system.',
+      timer: 2000,
+      showConfirmButton: false
+    });
+  });
+
+  // Disable DevTools keyboard shortcuts
+  document.addEventListener('keydown', function (e) {
+    if (
+      e.key === 'F12' ||                                       // F12
+      (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key)) ||  // Ctrl+Shift+I/J/C
+      (e.ctrlKey && e.key.toLowerCase() === 'u')              // Ctrl+U
+    ) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Access Denied',
+        text: 'This action is disabled on this system.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+  });
+   (function () {
+    let check = function () {
+      let before = new Date().getTime();
+      debugger;
+      let after = new Date().getTime();
+      if (after - before > 100) {
+        document.body.innerHTML = "<h1 style='text-align:center; color:red;'>🚫 Access Not Allowed! Contact Your Administrator for help on 0700667769</h1>";
+      }
+    };
+    setInterval(check, 1000);
+  })();
+  document.addEventListener('keydown', function (e) {
+    // Block Alt + Arrow navigation
+    if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Navigation Blocked',
+        text: 'Alt + Arrow keys are disabled.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+
+    // Block Backspace outside of input/textarea
+    if (e.key === 'Backspace' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'info',
+        title: 'Disabled',
+        text: 'Back navigation using Backspace is blocked.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  });
+
+  // Block browser history back/forward buttons
+  if (window.history && window.history.pushState) {
+    window.history.pushState(null, null, window.location.href);
+    window.onpopstate = function () {
+      window.history.pushState(null, null, window.location.href);
+      Swal.fire({
+        icon: 'info',
+        title: 'Navigation Blocked',
+        text: 'Browser history navigation is disabled.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    };
+  }
+
+  // Attempt to blur the address bar (will not prevent copying the URL entirely)
+  window.addEventListener('blur', () => {
+    window.focus();
+  });
+</script>

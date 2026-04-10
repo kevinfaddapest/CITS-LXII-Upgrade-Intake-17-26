@@ -1,0 +1,211 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accountability - {{ case.bereaved_member_name }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-light">
+<div class="container mt-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Accountability Report</h2>
+    <a href="{% url 'export_case_accountability_excel' case.id %}" class="btn btn-success">Export</a>
+  </div>
+
+  <!-- Totals -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card text-bg-success text-center p-2">
+        <h6>Total Contributions</h6>
+        <p id="total_contributions" class="fs-4">0.00</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-bg-danger text-center p-2">
+        <h6>Total Expenses</h6>
+        <p id="total_expenses" class="fs-4">0.00</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-bg-primary text-center p-2">
+        <h6>Balance</h6>
+        <p id="balance" class="fs-4">0.00</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contributions Table -->
+  <div class="card mb-4">
+    <div class="card-header">Contributions</div>
+    <div class="card-body p-0">
+      <table class="table table-striped mb-0">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Name</th>
+            <th>Amount</th>
+            <th>Contact</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="contributions_body">
+          <!-- AJAX-filled -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Expenses Table -->
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>Expenses</span>
+      <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addExpenseModal">Add Expense</button>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-striped mb-0">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Amount</th>
+            <th>Date</th>
+            <th>Added By</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="expenses_body">
+          <!-- AJAX-filled -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Add Expense Modal -->
+<div class="modal fade" id="addExpenseModal" tabindex="-1" aria-labelledby="addExpenseModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="addExpenseForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addExpenseModalLabel">Add Expense</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="expense_description" class="form-label">Description</label>
+            <input type="text" class="form-control" id="expense_description" name="description" required>
+          </div>
+          <div class="mb-3">
+            <label for="expense_amount" class="form-label">Amount</label>
+            <input type="number" step="0.01" class="form-control" id="expense_amount" name="amount" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Add Expense</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+$(document).ready(function() {
+    const caseId = "{{ case.id }}";
+
+    function fetchAccountability() {
+        $.get("{% url 'get_case_accountability' %}", { case_id: caseId }, function(data) {
+            // Contributions
+            let contribHtml = '';
+            if(data.contributions.length) {
+                data.contributions.forEach(c => {
+                    contribHtml += `<tr>
+                        <td>${c.rank__rank_name}</td>
+                        <td>${c.names}</td>
+                        <td>${parseFloat(c.amount).toFixed(2)}</td>
+                        <td>${c.contact}</td>
+                        <td>${c.date_of_contribution}</td>
+                    </tr>`;
+                });
+            } else {
+                contribHtml = '<tr><td colspan="5" class="text-center">No contributions yet</td></tr>';
+            }
+            $("#contributions_body").html(contribHtml);
+
+            // Expenses
+            let expHtml = '';
+            if(data.expenses.length) {
+                data.expenses.forEach(e => {
+                    expHtml += `<tr>
+                        <td>${e.description}</td>
+                        <td>${parseFloat(e.amount).toFixed(2)}</td>
+                        <td>${e.date}</td>
+                        <td>${e.added_by__username || ''}</td>
+                        <td><button class="btn btn-danger btn-sm delete-expense" data-id="${e.id}">Delete</button></td>
+                    </tr>`;
+                });
+            } else {
+                expHtml = '<tr><td colspan="5" class="text-center">No expenses yet</td></tr>';
+            }
+            $("#expenses_body").html(expHtml);
+
+            // Totals
+            $("#total_contributions").text(parseFloat(data.total_contributions).toFixed(2));
+            $("#total_expenses").text(parseFloat(data.total_expenses).toFixed(2));
+            $("#balance").text(parseFloat(data.balance).toFixed(2));
+        });
+    }
+
+    fetchAccountability(); // Load on page load
+
+    // Add expense
+    $("#addExpenseForm").submit(function(e) {
+        e.preventDefault();
+        const desc = $("#expense_description").val();
+        const amount = $("#expense_amount").val();
+        $.post(`/cases/${caseId}/add_expense_ajax/`, {
+            description: desc,
+            amount: amount,
+            csrfmiddlewaretoken: '{{ csrf_token }}'
+        }, function(resp) {
+            if(resp.success) {
+                $("#addExpenseModal").modal('hide');
+                $("#addExpenseForm")[0].reset();
+                fetchAccountability();
+                Swal.fire('Success', 'Expense added', 'success');
+            } else {
+                Swal.fire('Error', resp.error, 'error');
+            }
+        });
+    });
+
+    // Delete expense
+    $(document).on('click', '.delete-expense', function() {
+        const expId = $(this).data('id');
+        Swal.fire({
+            title: 'Are you sure?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if(result.isConfirmed) {
+                $.post(`/cases/delete_expense/${expId}/`, { csrfmiddlewaretoken: '{{ csrf_token }}' }, function(resp) {
+                    if(resp.success) {
+                        fetchAccountability();
+                        Swal.fire('Deleted!', 'Expense has been deleted.', 'success');
+                    } else {
+                        Swal.fire('Error', resp.error, 'error');
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+</body>
+</html>

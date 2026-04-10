@@ -1,0 +1,30 @@
+<!-- templates/add_expenditure.html -->
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Expenditure</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container mt-4">
+    <h2>Add Expenditure for Case: {{ case.case_name }}</h2>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            {{ form.description.label_tag }}
+            {{ form.description }}
+        </div>
+        <div class="mb-3">
+            {{ form.amount.label_tag }}
+            {{ form.amount }}
+        </div>
+        <div class="mb-3">
+            {{ form.handled_by.label_tag }}
+            {{ form.handled_by }}
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a href="{% url 'view_cases' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</body>
+</html>

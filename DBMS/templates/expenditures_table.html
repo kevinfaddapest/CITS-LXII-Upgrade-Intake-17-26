@@ -1,0 +1,27 @@
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Description</th>
+            <th>Handled By</th>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for exp in expenditures %}
+        <tr data-id="{{ exp.id }}" data-case-id="{{ case.id }}">
+            <td>{{ exp.description }}</td>
+            <td>{{ exp.handled_by }}</td>
+            <td>{{ exp.date|date:"Y-m-d H:i" }}</td>
+            <td>{{ exp.amount }}</td>
+            <td>
+                <button class="btn btn-sm btn-warning edit-expenditure-btn">Edit</button>
+                <button class="btn btn-sm btn-danger delete-exp-btn">Delete</button>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center">No expenditures yet</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
